@@ -1,0 +1,8 @@
+[submodule "prereq/safe-smart-account"]
+	path = prereq/safe-smart-account
+	url = https://github.com/BCWResearch/bcw-safe-smart-account.git
+	branch = poc-v1.4.1-1
+[submodule "prereq/safe-singleton-factory"]
+	path = prereq/safe-singleton-factory
+	url = https://github.com/BCWResearch/bcw-safe-singleton-factory.git
+	branch = main
