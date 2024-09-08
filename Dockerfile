@@ -33,8 +33,8 @@ COPY . .
 RUN git submodule update --init --recursive
 
 # Install dependencies for each submodule
-RUN cd prereq/safe-singleton-factory && npm install
-RUN cd prereq/safe-smart-account && yarn install
+RUN npm install --prefix prereq/safe-singleton-factory
+RUN yarn install --cwd prereq/safe-smart-account
 
 # Make the run.sh script executable
 RUN chmod +x /app/run.sh
