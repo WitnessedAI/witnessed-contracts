@@ -29,9 +29,12 @@ ls /app/prereq/safe-smart-contracts/singleton-factory-deployments
 
 cat /app/prereq/safe-smart-contracts/singleton-factory-deployments/${CHAIN_ID}/deployment.json
 
-# npx hardhat deploy --network customnetwork
-# npx hardhat deploy-proxy --network customnetwork
-# npx hardhat deploy-test-erc20 --network customnetwork
+cd /app/prereq/safe-smart-contracts
+MNEMONIC=${MNEMONIC} yarn hh deploy --network customnetwork
+MNEMONIC=${MNEMONIC} yarn hh deploy-proxy --network customnetwork
+MNEMONIC=${MNEMONIC} yarn hh deploy-test-erc20 --network customnetwork
+
+cat additional_deployments.json
 
 trap "kill ${PIDS[*]}" SIGINT
 wait
