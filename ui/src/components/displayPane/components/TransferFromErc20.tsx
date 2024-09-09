@@ -26,15 +26,16 @@ const styles = {
   },
 } as const;
 
-const TransferErc20: React.FC = () => {
+const TransferFromErc20: React.FC = () => {
   const { account, provider } = useWeb3React();
   const [messageApi, contextHolder] = message.useMessage();
-  const { loading, executeTx, signTransfer } = useWriteContract();
+  const { loading, executeTx, signTransferFrom, approveTransfer } = useWriteContract();
   const balance = useNativeBalance(provider, account);
   const [amount, setAmount] = useState<number | null>();
 
   const [erc20Address, setErc20Address] = useState<string>(ENVS.ERC20_ADDRESS);
   const [safeAddress, setSafeAddress] = useState<string>(ENVS.SAFE_ADDRESS);
+  const [transferFromAddress, setTransferFromAddress] = useState<string>(ENVS.TREASURY_ADDRESS);
   const [receiver, setReceiver] = useState<string>("");
 
   const [firstSignature, setFirstSignature] = useState<{
@@ -52,6 +53,10 @@ const TransferErc20: React.FC = () => {
 
   const handleSafeChange = (e: { target: { value: SetStateAction<string> } }) => {
     setSafeAddress(e.target.value);
+  };
+
+  const handleTransferFromChange = (e: { target: { value: SetStateAction<string> } }) => {
+    setTransferFromAddress(e.target.value);
   };
 
   const handleReceiverChange = (e: { target: { value: SetStateAction<string> } }) => {
@@ -81,7 +86,7 @@ const TransferErc20: React.FC = () => {
       return;
     }
 
-    const signature = await signTransfer(erc20Address, safeAddress, receiver, amount);
+    const signature = await signTransferFrom(erc20Address, safeAddress, transferFromAddress, receiver, amount);
     if (!signature.success) {
       messageApi.error(`An error occurred: ${signature.data}`);
       return;
@@ -148,8 +153,17 @@ const TransferErc20: React.FC = () => {
             alignItems: "center",
           }}>
             <Paragraph style={styles.statusText}> Signatures required: {(+!!firstSignature) + (+!!secondSignature)} / 2</Paragraph>
-            <Button type="primary" shape="round" onClick={() => { setFirstSignature(undefined); setSecondSignature(undefined); }}>
+            <Button type="primary" shape="round" onClick={() => {
+              setFirstSignature(undefined); setSecondSignature(undefined);
+            }}>
               Reset
+            </Button>
+            <Button type="primary" shape="round" onClick={() => {
+              approveTransfer(erc20Address, safeAddress).then((res) => {
+                console.log(res);
+              });
+            }}>
+              Approve
             </Button>
           </div>
         </Typography>
@@ -167,6 +181,17 @@ const TransferErc20: React.FC = () => {
           placeholder="Safe Address"
           style={{ marginBottom: "10px" }}
         />
+
+        <Input
+          title="Transfer From"
+          value={transferFromAddress}
+          onChange={handleTransferFromChange}
+          placeholder="Transfer From Address"
+          style={{ marginBottom: "10px" }}
+        />
+
+
+
         <Input
           title="Receiver"
           value={receiver}
@@ -202,4 +227,4 @@ const TransferErc20: React.FC = () => {
   );
 };
 
-export default TransferErc20;
+export default TransferFromErc20;

@@ -18,6 +18,13 @@ const styles = {
   }
 } as const;
 
+
+export const ENVS = {
+    ERC20_ADDRESS: process.env.REACT_APP_ERC20_ADDRESS || "",
+    SAFE_ADDRESS: process.env.REACT_APP_SAFE_ADDRESS || "",
+    TREASURY_ADDRESS: process.env.REACT_APP_TREASURY_ADDRESS || ""
+}
+
 function App() {
   const { defaultAlgorithm, darkAlgorithm } = theme;
   const [isDarkMode, setIsDarkMode] = useState(true);

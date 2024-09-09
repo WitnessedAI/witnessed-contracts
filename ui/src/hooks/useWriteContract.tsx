@@ -170,6 +170,79 @@ export const useWriteContract = () => {
     [signer, account]
   );
 
+  const signTransferFrom = useCallback(
+    async (
+      erc20: string,
+      safe: string,
+      sender: string,
+      receiver: string,
+      amount: number
+    ): Promise<{
+      success: boolean; data: {
+        tx: any;
+        signature: any;
+      }
+    }> => {
+      setLoading(true);
+      try {
+        if (!ethers.utils.isAddress(erc20)) {
+          throw new Error("Invalid ERC20 address");
+        }
+
+        if (!ethers.utils.isAddress(safe)) {
+          throw new Error("Invalid Safe address");
+        }
+
+        if (!ethers.utils.isAddress(receiver)) {
+          throw new Error("Invalid receiver address");
+        }
+
+        if (!amount || amount <= 0) {
+          throw new Error("Invalid amount");
+        }
+
+        const amountInEth = ethers.utils.parseUnits(amount.toFixed(0), 18); // Amount to transfer in eth
+        console.log("amountInEth", amountInEth);
+
+        // Build the ERC-20 transfer transaction (this will encode the transfer function)
+        const methodName = "transferFrom";
+        const methodParams = [sender.toLowerCase(), receiver.toLowerCase(), amountInEth];
+
+        const safeContract = new ethers.Contract(safe, SAFE_ABI, signer);
+        const erc20Contract = new ethers.Contract(erc20, ERC20_ABI, signer);
+
+        const data = await executeContractCallWithSigners(safeContract, erc20Contract, methodName, methodParams);
+        return { success: true, data };
+      } catch (error: any) {
+        const message = error.reason ?? error.message ?? error;
+        return { success: false, data: message };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [signer, account]
+  );
+
+
+  const approveTransfer = useCallback(
+    async (
+      erc20: string,
+      spender: string
+    ): Promise<{
+      tx: any;
+      receipt: any;
+    }> => {
+      setLoading(true);
+      // use current signer to call tx to approve spender
+      const erc20Contract = new ethers.Contract(erc20, ERC20_ABI, signer);
+      const tx = await erc20Contract.approve(spender, ethers.constants.MaxUint256);
+      const receipt = await tx.wait();
+      setLoading(false);
+      return { tx, receipt };
+    },
+    [signer, account]
+  );
+
   const executeContractCallWithSigners = useCallback(async (
     safe: Contract,
     contract: Contract,
@@ -348,6 +421,8 @@ export const useWriteContract = () => {
     watchMan,
     transferNative,
     signTransfer,
-    executeTx
+    signTransferFrom,
+    executeTx,
+    approveTransfer
   };
 };

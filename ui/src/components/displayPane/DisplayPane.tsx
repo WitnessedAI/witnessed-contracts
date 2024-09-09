@@ -11,6 +11,7 @@ import {
   Infos,
   Status,
   TransferErc20,
+  TransferFromErc20,
   WatchMan
 } from "./components";
 
@@ -71,7 +72,7 @@ const DisplayPane: React.FC<DisplayPaneProps> = ({ isDarkMode }) => {
         }}
       >
         <div style={styles.content}>
-          <Title level={2}>Watchman</Title>
+          <Title level={2}>WatchMan</Title>
           {isActive && (
             <>
               <Divider />
@@ -98,6 +99,27 @@ const DisplayPane: React.FC<DisplayPaneProps> = ({ isDarkMode }) => {
               <Divider />
               <div style={styles.action}>
                 <TransferErc20 />
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div
+        style={{
+          ...styles.container,
+          border: isDarkMode ? "1px solid rgba(152, 161, 192, 0.24)" : "none",
+          width: isTablet ? "90%" : "30%"
+        }}
+      >
+        <div style={styles.content}>
+          <Title level={2}>MultiSign ERC20 TransferFrom</Title>
+
+          {isActive && (
+            <>
+              <Divider />
+              <div style={styles.action}>
+                <TransferFromErc20 />
               </div>
             </>
           )}

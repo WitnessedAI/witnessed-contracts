@@ -3,6 +3,7 @@ import { FC, MouseEvent, ReactElement, SetStateAction, useState } from "react";
 import { Button, Divider, Input, message, Typography } from "antd";
 
 import { useWriteContract } from "hooks";
+import { ENVS } from "App";
 const { Paragraph } = Typography;
 
 const styles = {
@@ -27,9 +28,9 @@ const WatchMan: FC = (): ReactElement => {
     const [messageApi, contextHolder] = message.useMessage();
     const { loading, watchMan } = useWriteContract();
     // const [messageAuth, setMessageAuth] = useState<string>("");
-    const [erc20Address, setErc20Address] = useState<string>("0x82D50AD3C1091866E258Fd0f1a7cC9674609D254");
-    const [safeAddress, setSafeAddress] = useState<string>("0xaBbb61a87CcDEb9A5EE3F703F279A746d4620C58");
-    const [treasuryAddress, setTreasuryAddress] = useState<string>("0x0d1d4e623D10F9FBA5Db95830F7d3839406C6AF2");
+    const [erc20Address, setErc20Address] = useState<string>(ENVS.ERC20_ADDRESS);
+    const [safeAddress, setSafeAddress] = useState<string>(ENVS.SAFE_ADDRESS);
+    const [treasuryAddress, setTreasuryAddress] = useState<string>(ENVS.TREASURY_ADDRESS);
     const [userAddress, setUserAddress] = useState<string>("");
 
     const [tokenName, setTokenName] = useState<string>("");
