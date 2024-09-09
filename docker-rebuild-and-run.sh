@@ -11,4 +11,4 @@ docker rmi safe-poc --force
 docker build -t safe-poc .
 
 # Run the Docker container
-docker run -p 8545:8545 safe-poc
+docker run -p 8545:8545 -p 3000:3000 safe-poc

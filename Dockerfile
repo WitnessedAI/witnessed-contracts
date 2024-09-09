@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl-dev \
     tini \
+    jq \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Foundry and Anvil (using Foundry's installation script)
@@ -35,12 +36,13 @@ RUN git submodule update --init --recursive
 # Install dependencies for each submodule
 RUN npm install --prefix prereq/safe-singleton-factory
 RUN yarn install --cwd prereq/safe-smart-account
+RUN yarn install --cwd ui
 
 # Make the run.sh script executable
 RUN chmod +x /app/run.sh
 
-# Expose Anvil ports
-EXPOSE 8545
+# Expose Anvil and ui ports
+EXPOSE 8545 3000 
 
 # Use tini as the init system to handle signals properly
 ENTRYPOINT ["/usr/bin/tini", "--"]

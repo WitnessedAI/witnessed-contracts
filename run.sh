@@ -42,7 +42,20 @@ MNEMONIC=${MNEMONIC} yarn hh deploy --network customnetwork
 MNEMONIC=${MNEMONIC} yarn hh deploy-proxy --network customnetwork
 MNEMONIC=${MNEMONIC} yarn hh deploy-test-erc20 --network customnetwork
 
-cat additional_deployments.json
+JSON_FILE="additional_deployments.json"
+cat $JSON_FILE
+
+# Use jq to extract values from the JSON and export as environment variables
+export SAFE_PROXY_FACTORY=$(jq -r '.SafeProxyFactory' "$JSON_FILE")
+export SAFE=$(jq -r '.Safe' "$JSON_FILE")
+export SAFE_PROXY=$(jq -r '.SafeProxy' "$JSON_FILE")
+export ERC20_TOKEN=$(jq -r '.ERC20Token' "$JSON_FILE")
+
+cd /app/ui
+
+REACT_APP_ERC20_ADDRESS=${ERC20_TOKEN} REACT_APP_SAFE_ADDRESS=${SAFE_PROXY} yarn start &
+
+PIDS[1]=$!
 
 trap "kill ${PIDS[*]}" SIGINT
 wait
