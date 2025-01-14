@@ -223,6 +223,41 @@ export const useWriteContract = () => {
     [signer, account]
   );
 
+  const signDataCall = useCallback(
+    async (
+      safe: string,
+      to: string,
+      _data: string,
+      delegateCall?: boolean
+    ): Promise<{
+      success: boolean; data: {
+        tx: any;
+        signature: any;
+      }
+    }> => {
+      setLoading(true);
+      try {
+        if (!ethers.utils.isAddress(safe)) {
+          throw new Error("Invalid Safe address");
+        }
+
+        if (!ethers.utils.isAddress(to)) {
+          throw new Error("Invalid to address");
+        }
+
+        const safeContract = new ethers.Contract(safe, SAFE_ABI, signer);
+
+        const data = await executeDataCallWithSigners(safeContract, to, _data, delegateCall);
+        return { success: true, data };
+      } catch (error: any) {
+        const message = error.reason ?? error.message ?? error;
+        return { success: false, data: message };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [signer, account]
+  );
 
   const approveTransfer = useCallback(
     async (
@@ -242,6 +277,35 @@ export const useWriteContract = () => {
     },
     [signer, account]
   );
+
+  const executeDataCallWithSigners = useCallback(async (
+    safe: Contract,
+    to: string,
+    data: string,
+    delegateCall?: boolean,
+  ) => {
+    const tx = buildDataCall(to, data, (await safe.nonce()), delegateCall);
+    console.log("tx", tx);
+
+    // retrieve chain id
+    const cid = await safe.provider?.getNetwork();
+    const signerAddress = await signer?.getAddress();
+    console.log("signerAddress", signerAddress);
+    console.log("account", account);
+
+
+    console.log({ verifyingContract: safe.address, chainId: +cid.chainId }, EIP712_SAFE_TX_TYPE, tx);
+    const signature = await (signer as any)?._signTypedData({ verifyingContract: safe.address, chainId: cid.chainId.toFixed(0) }, EIP712_SAFE_TX_TYPE, tx)
+    console.log("signature", signature);
+    return {
+      tx,
+      signature: {
+        signer: signerAddress,
+        data: signature,
+      },
+    };
+    // return executeTxWithSigners(safe, tx, signers);
+  }, [signer, account]);
 
   const executeContractCallWithSigners = useCallback(async (
     safe: Contract,
@@ -364,6 +428,19 @@ export const useWriteContract = () => {
   }, [account, signer]);
 
 
+  const buildDataCall = (to: string, data: string, nonce: number, delegateCall?: boolean): any => {
+    const toSign = buildSafeTransaction({
+      to,
+      data,
+      nonce,
+      operation: delegateCall ? 1 : 0,
+    });
+    console.log("toSign", toSign);
+
+    // sign typed data by signer
+    return toSign;
+  }
+
   const buildContractCall = (
     contract: Contract,
     method: string,
@@ -422,6 +499,8 @@ export const useWriteContract = () => {
     transferNative,
     signTransfer,
     signTransferFrom,
+    signDataCall,
+    buildDataCall,
     executeTx,
     approveTransfer
   };

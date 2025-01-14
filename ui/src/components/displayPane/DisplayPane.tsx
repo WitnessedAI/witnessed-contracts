@@ -14,6 +14,7 @@ import {
   TransferFromErc20,
   WatchMan
 } from "./components";
+import SignContractData from "./components/SignContractData";
 
 const styles = {
   container: {
@@ -120,6 +121,26 @@ const DisplayPane: React.FC<DisplayPaneProps> = ({ isDarkMode }) => {
               <Divider />
               <div style={styles.action}>
                 <TransferFromErc20 />
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      <div
+        style={{
+          ...styles.container,
+          border: isDarkMode ? "1px solid rgba(152, 161, 192, 0.24)" : "none",
+          width: isTablet ? "90%" : "30%"
+        }}
+      >
+        <div style={styles.content}>
+          <Title level={2}>SignContractData</Title>
+
+          {isActive && (
+            <>
+              <Divider />
+              <div style={styles.action}>
+                <SignContractData />
               </div>
             </>
           )}

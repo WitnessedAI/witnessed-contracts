@@ -1,0 +1,189 @@
+import { MouseEvent, SetStateAction, useState } from "react";
+
+// import { useWeb3React } from "@web3-react/core";
+import { Button, Input, message, Typography } from "antd";
+
+import { useWriteContract } from "hooks";
+// import { parseBigNumberToFloat } from "utils/formatters";
+import { ENVS } from "App";
+
+const { Paragraph } = Typography;
+
+const styles = {
+  buttonTransfer: {
+    display: "flex",
+    margin: "15px 0"
+  },
+  display: {
+    paddingBlock: "0 15px",
+    display: "flex",
+    flexDirection: "column"
+  },
+  statusText: {
+    fontSize: "14px",
+    marginBottom: "0",
+    marginTop: "0"
+  },
+} as const;
+
+const SignContractData: React.FC = () => {
+  const [messageApi, contextHolder] = message.useMessage();
+  const { loading, executeTx, signDataCall } = useWriteContract();
+
+
+  const [erc20Address, setErc20Address] = useState<string>(ENVS.ERC20_ADDRESS);
+  const [safeAddress, setSafeAddress] = useState<string>(ENVS.SAFE_ADDRESS);
+  const [transferFromAddress, setTransferFromAddress] = useState<string>(ENVS.TREASURY_ADDRESS);
+
+  const [firstSignature, setFirstSignature] = useState<{
+    tx: any;
+    signature: any;
+  } | undefined>(undefined);
+  const [secondSignature, setSecondSignature] = useState<{
+    tx: any;
+    signature: any;
+  } | undefined>(undefined);
+
+  const handleErc20Change = (e: { target: { value: SetStateAction<string> } }) => {
+    setErc20Address(e.target.value);
+  };
+
+  const handleSafeChange = (e: { target: { value: SetStateAction<string> } }) => {
+    setSafeAddress(e.target.value);
+  };
+
+  const handleTransferFromChange = (e: { target: { value: SetStateAction<string> } }) => {
+    setTransferFromAddress(e.target.value);
+  };
+
+
+  const handleSign = async (event: MouseEvent<HTMLButtonElement>): Promise<void> => {
+    event.preventDefault();
+
+    if (!erc20Address) {
+      messageApi.error("The ERC20 Token Address is missing. Please check your input.");
+      return;
+    }
+
+    if (!safeAddress) {
+      messageApi.error("The Safe Address is missing. Please check your input.");
+      return;
+    }
+
+
+
+    const signature = await signDataCall(safeAddress, erc20Address, transferFromAddress, true);
+    if (!signature.success) {
+      messageApi.error(`An error occurred: ${signature.data}`);
+      return;
+    }
+    // await signTransfer(erc20Address, safeAddress, receiver, amount);
+    if (!firstSignature) {
+      // assign signature in first
+      setFirstSignature(signature.data);
+      console.log("First signature: ", signature.data);
+      messageApi.success("First signature added successfully.");
+      return;
+    }
+
+    if (!secondSignature) {
+      // assign signature in second
+      setSecondSignature(signature.data);
+      console.log("Second signature: ", signature.data);
+      messageApi.success("Second signature added successfully.");
+      return;
+    }
+
+  }
+
+  const handleTransfer = async (event: MouseEvent<HTMLButtonElement>): Promise<void> => {
+    event.preventDefault();
+
+    if (!firstSignature || !secondSignature) {
+      messageApi.error("Please sign the transaction first.");
+      return;
+    }
+    try {
+      const resp = await executeTx(safeAddress, firstSignature?.tx, [firstSignature?.signature, secondSignature?.signature]);
+      console.log("Response: ", resp);
+    } catch (error) {
+      console.error("Error: ", error);
+    }
+    // if (success) {
+    //   messageApi.success(
+    //     `Success! Transaction Hash: ${getEllipsisTxt(data?.transactionHash ?? "Transactions Hash missing.", 8)}`
+    //   );
+    // } else {
+    //   messageApi.error(`An error occurred: ${data}`);
+    // }
+  };
+
+  return (
+    <>
+      {contextHolder}
+      <div style={{ width: "100%", minWidth: "250px" }}>
+        {/* <Title level={5}>Signatures required: {(+!!firstSignature) + (+!!secondSignature)} / 2</Title> */}
+        <Typography style={styles.display}>
+          <div style={{
+            gap: "10px",
+            width: "100%",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}>
+            <Paragraph style={styles.statusText}> Signatures required: {(+!!firstSignature) + (+!!secondSignature)} / 2</Paragraph>
+            <Button type="primary" shape="round" onClick={() => {
+              setFirstSignature(undefined); setSecondSignature(undefined);
+            }}>
+              Reset
+            </Button>
+          </div>
+        </Typography>
+        <Input
+          title="MerkleStoreProxy Address"
+          value={erc20Address}
+          onChange={handleErc20Change}
+          placeholder="MerkleStoreProxy Address"
+          style={{ marginBottom: "10px" }}
+        />
+        <Input
+          title="Safe Address"
+          value={safeAddress}
+          onChange={handleSafeChange}
+          placeholder="Safe Address"
+          style={{ marginBottom: "10px" }}
+        />
+
+        <Input
+          title="Transfer From"
+          value={transferFromAddress}
+          onChange={handleTransferFromChange}
+          placeholder="Calldata"
+          style={{ marginBottom: "10px" }}
+        />
+
+
+
+
+
+
+        <div style={{ display: "inline-flex", gap: "10px", width: "100%" }}>
+
+          <div style={styles.buttonTransfer}>
+            <Button type="primary" shape="round" onClick={handleSign} loading={loading} disabled={loading}>
+              Sign
+            </Button>
+          </div>
+
+          <div style={styles.buttonTransfer}>
+            <Button type="primary" shape="round" onClick={handleTransfer} loading={loading} disabled={loading}>
+              Execute
+            </Button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default SignContractData;
