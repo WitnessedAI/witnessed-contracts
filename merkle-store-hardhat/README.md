@@ -1,13 +1,13 @@
-# Sample Hardhat Project
+# Upgradable Merkle Store POC integrated with Gnosis Safe
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a Hardhat Ignition module that deploys that contract.
+This project is a proof of concept for an upgradable Merkle Store contract that is integrated with a Gnosis Safe contract. The Merkle Store contract is a simple contract that allows users to store data in a Merkle tree. The Gnosis Safe contract is a multi-signature wallet that allows users to execute transactions with a threshold of signatures.
 
 Try running some of the following tasks:
 
 ```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat ignition deploy ./ignition/modules/Lock.ts
+
+npx hardhat deploy:merkle-store --network amoy --gnosis <GNOSIS_ADDRESS>
+npx hardhat --network amoy print-merkle-store-version
+npx hardhat --network amoy deploy-and-generate-upgrade-calldata
+
 ```

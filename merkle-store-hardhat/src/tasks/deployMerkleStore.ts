@@ -7,11 +7,11 @@ task(
   "Deploy the UpgradableMerkleStore with a Transparent Proxy"
 )
   .addParam("gnosis", "The Gnosis Safe address for upgrade admin")
-  .addParam("admin", "The Operational Admin address")
   .setAction(async (taskArgs, hre) => {
     const { ethers, upgrades } = hre;
     const gnosisSafeAddress = taskArgs.gnosis;
-    const operationalAdminAddress = taskArgs.admin;
+    const signers = await ethers.getSigners();
+    const operationalAdminAddress = signers[0].address;
 
     console.log("Deploying UpgradableMerkleStore implementation...");
     const UpgradableMerkleStore = await ethers.getContractFactory(
