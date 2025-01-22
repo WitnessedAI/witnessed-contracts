@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/utils/StorageSlot.sol";
 
-contract UpgradableMerkleStoreV1 is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
+contract UpgradableMerkleStoreV2 is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     // Storage slots for variables
     bytes32 private constant _ROOT_NONCE_SLOT = keccak256("upgradable.merkle.store.root.nonce");
     bytes32 private constant _MERKLE_ROOTS_SLOT = keccak256("upgradable.merkle.store.merkle.roots");
@@ -15,15 +15,23 @@ contract UpgradableMerkleStoreV1 is Initializable, AccessControlUpgradeable, UUP
     bytes32 public constant UPGRADE_ADMIN_ROLE = keccak256("UPGRADE_ADMIN_ROLE");
     bytes32 public constant OPERATIONAL_ADMIN_ROLE = keccak256("OPERATIONAL_ADMIN_ROLE");
 
-    // Events
-    event NewRootSubmission(bytes32 indexed idx);
-    event RootModification(bytes32 indexed idx);
+    // Events 
+    event NewRootSubmission(bytes32 indexed idx, bytes32 indexed merkleRoot, string metadata, string data);
+    event RootMetadataModification(bytes32 indexed idx, string metadata);
 
+    /// A Merkle Tree submission
     struct Submission {
-        string merkleRoot;
-        string datafileURL;
-        string batchMetadata;
+        /// The merkle tree root
+        bytes32 merkleRoot;
+        /// Mutable metadata, should be used for things that can change depending on
+        /// how it runs.
+        string metadata;
+        // Immutable data, should be used for any data that needs to be stored permanently
+        // with this tree.
+        string data;
+        // The block number of the Submission
         uint256 submittedOn;
+        // The block number of the UpdatedOn
         uint256 updatedOn;
     }
 
@@ -56,9 +64,9 @@ contract UpgradableMerkleStoreV1 is Initializable, AccessControlUpgradeable, UUP
     /// @notice Submit a new Merkle root with metadata
     function submitNewMerkleRootWithMetadata(
         bytes32 idx,
-        string calldata merkleRoot,
-        string calldata datafileURL,
-        string calldata roundMetadata
+        bytes32 merkleRoot,
+        string calldata data,
+        string calldata metadata
     ) external onlyRole(OPERATIONAL_ADMIN_ROLE) returns (bytes32) {
         // Increment root nonce
         uint256 rootNonce = StorageSlot.getUint256Slot(_ROOT_NONCE_SLOT).value + 1;
@@ -68,13 +76,13 @@ contract UpgradableMerkleStoreV1 is Initializable, AccessControlUpgradeable, UUP
         mapping(bytes32 => Submission) storage merkleRoots = _getMerkleRootsStorage();
         merkleRoots[idx] = Submission(
             merkleRoot,
-            datafileURL,
-            roundMetadata,
+            metadata,
+            data,
             block.number,
             block.number
         );
 
-        emit NewRootSubmission(idx);
+        emit NewRootSubmission(idx, merkleRoot, metadata, data);
         return sha256(abi.encodePacked(merkleRoot));
     }
 
@@ -88,10 +96,10 @@ contract UpgradableMerkleStoreV1 is Initializable, AccessControlUpgradeable, UUP
 
         require(prevSubmission.submittedOn != 0, "Submission does not exist");
 
-        prevSubmission.batchMetadata = newMetadata;
+        prevSubmission.metadata = newMetadata;
         prevSubmission.updatedOn = block.number;
 
-        emit RootModification(idx);
+        emit RootMetadataModification(idx, newMetadata);
         return prevSubmission;
     }
 
