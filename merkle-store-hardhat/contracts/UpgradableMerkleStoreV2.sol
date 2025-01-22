@@ -16,22 +16,22 @@ contract UpgradableMerkleStoreV2 is Initializable, AccessControlUpgradeable, UUP
     bytes32 public constant OPERATIONAL_ADMIN_ROLE = keccak256("OPERATIONAL_ADMIN_ROLE");
 
     // Events 
-    event NewRootSubmission(bytes32 indexed idx, bytes32 indexed merkleRoot, string metadata, string data);
+    event NewRootSubmission(bytes32 indexed idx, bytes32 indexed merkleRoot, string data, string metadata);
     event RootMetadataModification(bytes32 indexed idx, string metadata);
 
     /// A Merkle Tree submission
     struct Submission {
         /// The merkle tree root
         bytes32 merkleRoot;
+        /// Immutable data, should be used for any data that needs to be stored permanently
+        /// with this tree.
+        string data;
         /// Mutable metadata, should be used for things that can change depending on
         /// how it runs.
         string metadata;
-        // Immutable data, should be used for any data that needs to be stored permanently
-        // with this tree.
-        string data;
-        // The block number of the Submission
+        /// The block number of the Submission
         uint256 submittedOn;
-        // The block number of the UpdatedOn
+        /// The block number of the UpdatedOn
         uint256 updatedOn;
     }
 
@@ -76,13 +76,13 @@ contract UpgradableMerkleStoreV2 is Initializable, AccessControlUpgradeable, UUP
         mapping(bytes32 => Submission) storage merkleRoots = _getMerkleRootsStorage();
         merkleRoots[idx] = Submission(
             merkleRoot,
-            metadata,
             data,
+            metadata,
             block.number,
             block.number
         );
 
-        emit NewRootSubmission(idx, merkleRoot, metadata, data);
+        emit NewRootSubmission(idx, merkleRoot, data, metadata);
         return sha256(abi.encodePacked(merkleRoot));
     }
 
