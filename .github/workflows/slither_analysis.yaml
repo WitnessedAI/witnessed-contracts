@@ -1,0 +1,14 @@
+name: Slither Static Analysis
+on:
+  pull_request:
+    branches: ["main"]
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: crytic/slither-action@v0.4.0
+        with:
+          target: "merkle-store-hardhat"
+          slither-args: "--exclude assembly,low-level-calls,naming-convention,pragma,solc-version,unused-return"
+          fail-on: medium
