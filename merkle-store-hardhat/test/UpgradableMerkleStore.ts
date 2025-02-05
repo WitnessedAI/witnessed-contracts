@@ -29,8 +29,9 @@ describe("UpgradableMerkleStore", function () {
 
   describe("Deployment", function () {
     it("Should initialize with the correct roles", async function () {
-      const { proxy, gnosisSafe, operationalAdmin } =
-        await loadFixture(deployMerkleStoreFixture);
+      const { proxy, gnosisSafe, operationalAdmin } = await loadFixture(
+        deployMerkleStoreFixture
+      );
 
       const UPGRADE_ADMIN_ROLE = ethers.keccak256(
         ethers.toUtf8Bytes("UPGRADE_ADMIN_ROLE")
@@ -48,7 +49,7 @@ describe("UpgradableMerkleStore", function () {
   });
 
   describe("Versioning", function () {
-    it("Should return the correct version for V1", async function () {
+    it("Should return the correct version for V1 before upgrade", async function () {
       const { proxy } = await loadFixture(deployMerkleStoreFixture);
       expect(await proxy.version()).to.equal("1.0.0");
     });
@@ -78,7 +79,7 @@ describe("UpgradableMerkleStore", function () {
       );
 
       const idx = ethers.id("merkle-root-1");
-      const merkleRoot = "merkle-root-1";
+      const merkleRoot = ethers.id("merkle-root-1");
       const datafileURL = "https://example.com/datafile";
       const batchMetadata = '{"batch":"metadata"}';
 
@@ -93,14 +94,14 @@ describe("UpgradableMerkleStore", function () {
           )
       )
         .to.emit(proxy, "NewRootSubmission")
-        .withArgs(idx);
+        .withArgs(idx, merkleRoot, datafileURL, batchMetadata);
     });
 
     it("Should revert if a non-Operational Admin tries to submit", async function () {
       const { proxy, otherAccount } = await loadFixture(deployMerkleStoreFixture);
 
       const idx = ethers.id("merkle-root-1");
-      const merkleRoot = "merkle-root-1";
+      const merkleRoot = ethers.id("merkle-root-1");
       const datafileURL = "https://example.com/datafile";
       const batchMetadata = '{"batch":"metadata"}';
 
@@ -121,8 +122,93 @@ describe("UpgradableMerkleStore", function () {
         .to.be.revertedWithCustomError(proxy, "AccessControlUnauthorizedAccount")
         .withArgs(otherAccount.address, OPERATIONAL_ADMIN_ROLE);
     });
+
+    it("Should allow updating metadata for an existing Merkle root", async function () {
+      const { proxy, operationalAdmin } = await loadFixture(
+        deployMerkleStoreFixture
+      );
+
+      const idx = ethers.id("merkle-root-3");
+      const merkleRoot = ethers.id("merkle-root-3");
+      const datafileURL = "https://example.com/datafile3";
+      const batchMetadata = '{"batch":"metadata3"}';
+      const newMetadata = '{"batch":"updated-metadata3"}';
+
+      await proxy
+        .connect(operationalAdmin)
+        .submitNewMerkleRootWithMetadata(
+          idx,
+          merkleRoot,
+          datafileURL,
+          batchMetadata
+        );
+      await expect(
+        proxy
+          .connect(operationalAdmin)
+          .updateMetadataOnMerkleRootHash(idx, newMetadata)
+      )
+        .to.emit(proxy, "RootMetadataModification")
+        .withArgs(idx, newMetadata);
+    });
   });
 
+  describe("Retrieval Functions", function () {
+    it("Should retrieve submitted Merkle root details correctly", async function () {
+      const { proxy, operationalAdmin } = await loadFixture(
+        deployMerkleStoreFixture
+      );
+      const idx = ethers.id("merkle-root-5");
+      const merkleRoot = ethers.id("merkle-root-5");
+      const datafileURL = "https://example.com/datafile5";
+      const batchMetadata = '{"batch":"metadata5"}';
+
+      await proxy
+        .connect(operationalAdmin)
+        .submitNewMerkleRootWithMetadata(
+          idx,
+          merkleRoot,
+          datafileURL,
+          batchMetadata
+        );
+      const storedData = await proxy.getMerkleRootOnHash(idx);
+
+      expect(storedData.merkleRoot).to.equal(merkleRoot);
+      expect(storedData.data).to.equal(datafileURL);
+      expect(storedData.metadata).to.equal(batchMetadata);
+    });
+
+    it("Should retrieve submitted Merkle root details correctly after upgrade", async function () {
+      const { proxy, operationalAdmin, gnosisSafe } = await loadFixture(
+        deployMerkleStoreFixture
+      );
+      const idx = ethers.id("merkle-root-5");
+      const merkleRoot = ethers.id("merkle-root-5");
+      const datafileURL = "https://example.com/datafile5";
+      const batchMetadata = '{"batch":"metadata5"}';
+
+      await proxy
+        .connect(operationalAdmin)
+        .submitNewMerkleRootWithMetadata(
+          idx,
+          merkleRoot,
+          datafileURL,
+          batchMetadata
+        );
+
+      const UpgradableMerkleStoreV2 = await ethers.getContractFactory(
+        "UpgradableMerkleStoreV2"
+      );
+      await upgrades.upgradeProxy(
+        await proxy.getAddress(),
+        UpgradableMerkleStoreV2.connect(gnosisSafe)
+      );
+
+      const storedData = await proxy.getMerkleRootOnHash(idx);
+      expect(storedData.merkleRoot).to.equal(merkleRoot);
+      expect(storedData.data).to.equal(datafileURL);
+      expect(storedData.metadata).to.equal(batchMetadata);
+    });
+  });
   describe("Access Control", function () {
     it("Should allow Upgrade Admin to authorize upgrades", async function () {
       const { proxy, gnosisSafe } = await loadFixture(deployMerkleStoreFixture);
