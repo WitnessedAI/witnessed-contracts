@@ -4,51 +4,59 @@ import { AdditionalDeploymentStorage } from "../utils/additional_deployment_stor
 
 task(
   "deploy-and-generate-upgrade-calldata",
-  "Deploy V2 implementation and generate calldata for Gnosis Safe"
-)
-  .setAction(async (taskArgs, hre) => {
-    const { ethers } = hre;
+  "Deploy V2 implementation and generate upgrade calldata for Gnosis Safe"
+).setAction(async (taskArgs, hre) => {
+  const { ethers, upgrades } = hre;
 
-    const additional_deployments = AdditionalDeploymentStorage.getDeployments();
-    const proxyAddress = additional_deployments["UpgradableMerkleStore"];
+  // Step 1: Load previous deployments
+  const additionalDeployments = AdditionalDeploymentStorage.getDeployments();
+  const proxyAddress = additionalDeployments["UpgradableMerkleStore"];
+  const merkleStoreDataAddress = additionalDeployments["MerkleStoreData"];
 
-    if (!proxyAddress) {
-      console.error(
-        "No UpgradableMerkleStore deployment found. Please deploy the UpgradableMerkleStore first."
-      );
-      return;
-    }
-
-    // Step 1: Deploy V2 Implementation
-    console.log("Deploying UpgradableMerkleStoreV2...");
-    const UpgradableMerkleStoreV2 = await ethers.getContractFactory(
-      "UpgradableMerkleStoreV2"
+  if (!proxyAddress || !merkleStoreDataAddress) {
+    console.error(
+      "❌ No existing UpgradableMerkleStoreV1 or MerkleStoreData found. Deploy V1 first."
     );
-    const newImplementation = await UpgradableMerkleStoreV2.deploy();
-    await newImplementation.waitForDeployment();
-    console.log(
-      "Deployed UpgradableMerkleStoreV2 at:",
-      newImplementation.target
-    );
+    return;
+  }
 
-    // Step 2: Generate Upgrade Calldata
+  console.log("\n🔍 Found existing deployments:");
+  console.log("🔹 UpgradableMerkleStoreV1 Proxy Address:", proxyAddress);
+  console.log("🔹 MerkleStoreData Address:", merkleStoreDataAddress);
 
-    const proxyAdminInterface = new ethers.Interface([
-      "function upgrade(address proxy, address implementation)",
-    ]);
+  // Step 2: Deploy V2 Implementation (Explicitly setting UUPS kind)
+  console.log("\n🚀 Deploying UpgradableMerkleStoreV2...");
+  const UpgradableMerkleStoreV2 = await ethers.getContractFactory("UpgradableMerkleStoreV2");
 
-    const calldata = proxyAdminInterface.encodeFunctionData("upgrade", [
-      proxyAddress,
-      newImplementation.target,
-    ]);
-
-    console.log("\nUpgrade calldata generated:");
-    console.log("Calldata for Gnosis Safe:", calldata);
-
-    AdditionalDeploymentStorage.insertDeploymentAddressToFile(
-      "UpgradableMerkleStoreV2CallData",
-      calldata
-    );
-
-    console.log("\nSubmit this calldata to Gnosis Safe for multisig approval.");
+  const newImplementation = await upgrades.prepareUpgrade(proxyAddress, UpgradableMerkleStoreV2, {
+    kind: "uups", // Explicitly setting UUPS proxy type
   });
+
+  console.log("✅ UpgradableMerkleStoreV2 Implementation deployed at:", newImplementation);
+
+  // Step 3: Generate Upgrade Calldata for Gnosis Safe
+  const proxyAdminInterface = new ethers.Interface([
+    "function upgrade(address proxy, address implementation)",
+  ]);
+
+  const upgradeCalldata = proxyAdminInterface.encodeFunctionData("upgrade", [
+    proxyAddress,
+    newImplementation,
+  ]);
+
+  console.log("\n📌 Upgrade calldata generated:");
+  console.log("🔹 Calldata for Gnosis Safe:", upgradeCalldata);
+
+  // Step 4: Store upgrade calldata for later use
+  AdditionalDeploymentStorage.insertDeploymentAddressToFile(
+    "UpgradableMerkleStoreV2Implementation",
+    newImplementation.toString()
+  );
+
+  AdditionalDeploymentStorage.insertDeploymentAddressToFile(
+    "UpgradableMerkleStoreV2CallData",
+    upgradeCalldata
+  );
+
+  console.log("\n✅ Submit this calldata to Gnosis Safe for multisig approval.");
+});
