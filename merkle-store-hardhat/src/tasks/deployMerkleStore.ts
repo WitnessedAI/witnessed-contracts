@@ -11,7 +11,7 @@ task(
     const { ethers, upgrades } = hre;
     const gnosisSafeAddress = taskArgs.gnosis;
     const signers = await ethers.getSigners();
-    const operationalAdminAddress = signers[0].address;
+    const operationalAdminAddress = signers[1].address;
 
     console.log("Deploying UpgradableMerkleStore implementation...");
     const UpgradableMerkleStore = await ethers.getContractFactory(
