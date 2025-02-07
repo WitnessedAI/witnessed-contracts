@@ -108,12 +108,13 @@ contract UpgradableMerkleStoreV2 is
         string calldata metadata,
         uint256 lockAt
     ) external onlyRole(OPERATIONAL_ADMIN_ROLE) returns (bytes32) {
-
-        
         mapping(bytes32 => Submission)
             storage merkleRoots = _getMerkleRootsStorage();
 
-        require(merkleRoots[idx].submittedOn != 0, "Cannot submitNewMerkleRoot with given Idx, already taken.");
+        require(
+            merkleRoots[idx].submittedOn == 0,
+            "Cannot submitNewMerkleRoot with given Idx, already taken."
+        );
 
         // Increment root nonce
         uint256 rootNonce = StorageSlot.getUint256Slot(_ROOT_NONCE_SLOT).value +
@@ -153,7 +154,10 @@ contract UpgradableMerkleStoreV2 is
             storage merkleRoots = _getMerkleRootsStorage();
         Submission storage prevSubmission = merkleRoots[idx];
 
-        require(prevSubmission.lockAt > block.timestamp, "Submission is locked");
+        require(
+            prevSubmission.lockAt > block.timestamp,
+            "Submission is locked"
+        );
         require(prevSubmission.submittedOn != 0, "Submission does not exist");
 
         if (lockAt < block.timestamp) {
@@ -164,7 +168,7 @@ contract UpgradableMerkleStoreV2 is
         prevSubmission.lockAt = lockAt;
         prevSubmission.updatedOn = block.number;
 
-        emit RootMetadataModification(idx,  lockAt, newMetadata);
+        emit RootMetadataModification(idx, lockAt, newMetadata);
         return prevSubmission;
     }
 
@@ -178,7 +182,10 @@ contract UpgradableMerkleStoreV2 is
             storage merkleRoots = _getMerkleRootsStorage();
         Submission storage prevSubmission = merkleRoots[idx];
 
-        require(prevSubmission.lockAt > block.timestamp, "Submission is already locked");
+        require(
+            prevSubmission.lockAt > block.timestamp,
+            "Submission is already locked"
+        );
         require(prevSubmission.submittedOn != 0, "Submission does not exist");
 
         prevSubmission.lockAt = block.timestamp;

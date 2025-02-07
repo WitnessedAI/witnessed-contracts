@@ -15,7 +15,7 @@ task(
 
     console.log("Deploying UpgradableMerkleStore implementation...");
     const UpgradableMerkleStore = await ethers.getContractFactory(
-      "UpgradableMerkleStoreV1"
+      "UpgradableMerkleStoreV2"
     );
     const proxy = await upgrades.deployProxy(
       UpgradableMerkleStore,
@@ -27,13 +27,20 @@ task(
 
     await proxy.waitForDeployment();
     const proxyAddress = await proxy.getAddress();
+    const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress)
     console.log("UpgradableMerkleStore deployed!");
     console.log("Proxy address:", proxyAddress);
+    console.log("Implementation address:", implementationAddress);
     console.log("Gnosis Safe (Upgrade Admin):", gnosisSafeAddress);
     console.log("Operational Admin:", operationalAdminAddress);
 
     AdditionalDeploymentStorage.insertDeploymentAddressToFile(
       "UpgradableMerkleStore",
       proxyAddress
+    );
+
+    AdditionalDeploymentStorage.insertDeploymentAddressToFile(
+      "UpgradableMerkleStoreImplementation",
+      implementationAddress
     );
   });

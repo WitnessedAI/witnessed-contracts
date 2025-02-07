@@ -1,4 +1,4 @@
 {
-  "UpgradableMerkleStore": "0x982C02Bfd989Cd5F5aa9c23192ebb5c053fD9661",
-  "UpgradableMerkleStoreV2CallData": "0x99a88ec4000000000000000000000000982c02bfd989cd5f5aa9c23192ebb5c053fd9661000000000000000000000000fdc509163431af09d3b3c24393d4d98fa2c3b2a9"
+  "UpgradableMerkleStore": "0x1C6aA14c2390e21E2e4aa1343b6cef36069c5D0a",
+  "UpgradableMerkleStoreImplementation": "0x2731F87feD30acd0d0BB8D6C62c8CAC3Fa056C23"
 }
