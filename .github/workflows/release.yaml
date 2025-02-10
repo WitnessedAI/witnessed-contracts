@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: '18'
           cache: 'yarn'
-          working-directory: ./merkle-store-hardhat
+          cache-dependency-path: merkle-store-hardhat/yarn.lock
       - run: yarn
       - run: npx hardhat compile
 
