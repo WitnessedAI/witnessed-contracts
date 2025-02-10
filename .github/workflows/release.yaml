@@ -19,6 +19,7 @@ jobs:
         with:
           node-version: '18'
           cache: 'yarn'
+          working-directory: ./merkle-store-hardhat
       - run: yarn
       - run: npx hardhat compile
 
