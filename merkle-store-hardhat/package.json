@@ -18,7 +18,7 @@
     "@types/node": ">=18.0.0",
     "chai": "4",
     "ethers": "^6.13.5",
-    "hardhat": "^2.22.18",
+    "hardhat": "^2.22.19",
     "hardhat-gas-reporter": "^2.2.2",
     "solidity-coverage": "^0.8.14",
     "ts-node": ">=8.0.0",
