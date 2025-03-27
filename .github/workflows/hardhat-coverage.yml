@@ -10,12 +10,12 @@ jobs:
 
     steps:
       - name: Checkout repository with submodules
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3.6.0
         with:
           submodules: recursive
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v3.8.1
         with:
           node-version: '18'
 
@@ -31,7 +31,7 @@ jobs:
         run: yarn coverage
 
       - name: Upload coverage report as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: merkle-store-hardhat/coverage/
