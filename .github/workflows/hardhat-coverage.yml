@@ -1,0 +1,54 @@
+name: Hardhat Coverage
+
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository with submodules
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies (main repo)
+        run: yarn install --frozen-lockfile
+
+      - name: Install dependencies (merkle-store-hardhat)
+        working-directory: merkle-store-hardhat
+        run: yarn install --frozen-lockfile
+
+      - name: Run Hardhat Coverage
+        working-directory: merkle-store-hardhat
+        run: yarn coverage
+
+      - name: Upload coverage report as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: merkle-store-hardhat/coverage/
+
+      - name: Format coverage summary
+        id: coverage
+        run: |
+          echo '```' > summary.txt
+          grep -A 20 '<h1>All files</h1>' merkle-store-hardhat/coverage/lcov-report/index.html | sed 's/<[^>]*>//g' >> summary.txt
+          echo '```' >> summary.txt
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          cat summary.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Comment on PR with coverage
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          message: |
+            🧪 **Solidity Coverage Report**
+            ${{ steps.coverage.outputs.summary }}
