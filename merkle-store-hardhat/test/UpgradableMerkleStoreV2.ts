@@ -7,12 +7,12 @@ describe("UpgradableMerkleStore", function () {
     const [deployer, gnosisSafe, operationalAdmin, otherAccount] =
       await ethers.getSigners();
 
-    const UpgradableMerkleStoreV1 = await ethers.getContractFactory(
-      "UpgradableMerkleStoreV1"
+    const UpgradableMerkleStoreV2 = await ethers.getContractFactory(
+      "UpgradableMerkleStoreV2"
     );
 
     const proxy = await upgrades.deployProxy(
-      UpgradableMerkleStoreV1,
+      UpgradableMerkleStoreV2,
       [gnosisSafe.address, operationalAdmin.address],
       { initializer: "initialize" }
     );
@@ -49,26 +49,26 @@ describe("UpgradableMerkleStore", function () {
   });
 
   describe("Versioning", function () {
-    it("Should return the correct version for V1 before upgrade", async function () {
+    it("Should return the correct version for V2 before upgrade", async function () {
       const { proxy } = await loadFixture(deployMerkleStoreFixture);
-      expect(await proxy.version()).to.equal("1.0.0");
+      expect(await proxy.version()).to.equal("2.0.0");
     });
 
-    it("Should return the correct version for V2 after upgrade", async function () {
+    it("Should return the correct version for V1 after upgrade", async function () {
       const { proxy, gnosisSafe } = await loadFixture(deployMerkleStoreFixture);
 
-      const UpgradableMerkleStoreV2 = await ethers.getContractFactory(
-        "UpgradableMerkleStoreV2"
+      const UpgradableMerkleStoreV1 = await ethers.getContractFactory(
+        "UpgradableMerkleStoreV1"
       );
-      const newImplementation = await UpgradableMerkleStoreV2.deploy();
+      const newImplementation = await UpgradableMerkleStoreV1.deploy();
       await newImplementation.waitForDeployment();
 
       await upgrades.upgradeProxy(
         await proxy.getAddress(),
-        UpgradableMerkleStoreV2.connect(gnosisSafe)
+        UpgradableMerkleStoreV1.connect(gnosisSafe)
       );
 
-      expect(await proxy.version()).to.equal("2.0.0");
+      expect(await proxy.version()).to.equal("1.0.0");
     });
   });
 
@@ -264,7 +264,6 @@ describe("UpgradableMerkleStore", function () {
         .withArgs(otherAccount.address, UPGRADE_ADMIN_ROLE);
     });
   });
-
   describe("Helpers", function () {
     it("Should return the correct number of Merkle roots", async function () {
       const { proxy, operationalAdmin } = await loadFixture(
