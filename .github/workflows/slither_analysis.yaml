@@ -9,16 +9,16 @@ jobs:
     name: Run Security Analysis
     runs-on: ubuntu-latest
     container: trailofbits/eth-security-toolbox
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        
+
     - name: Install yarn
       run: npm install -g yarn
-        
+
     - name: Cache yarn packages
       uses: actions/cache@v3
       id: yarn-cache
@@ -29,13 +29,13 @@ jobs:
         key: ${{ runner.os }}-yarn-${{ hashFiles('merkle-store-hardhat/yarn.lock') }}
         restore-keys: |
           ${{ runner.os }}-yarn-
-          
+
     - name: Install project dependencies
       run: |
         cd merkle-store-hardhat
         yarn install --frozen-lockfile
         cd ..
-        
+
     - name: Run Slither and generate Markdown report
       id: slither
       continue-on-error: true
@@ -48,48 +48,70 @@ jobs:
           --checklist \
           --markdown-root "../" \
           > ../slither.md 2>&1 || echo "Slither completed with findings"
-        
-        # Convert markdown to HTML for better PR display
+
+        # Add status indicator
+        if grep -q "\[ \]" ../slither.md; then
+          echo "SLITHER_STATUS=⚠️" >> $GITHUB_ENV
+        else
+          echo "SLITHER_STATUS=✅" >> $GITHUB_ENV
+        fi
+
         echo "SLITHER_REPORT<<EOF" >> $GITHUB_ENV
         cat ../slither.md >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
-        
-    - name: Create PR comment with results
+
+    - name: Upload Slither report artifact
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: slither-security-report
+        path: slither.md
+
+    - name: Create PR comment
       uses: actions/github-script@v6
       if: always()
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          const fs = require('fs');
-          
-          // Process the markdown report
-          const processReport = (markdown) => {
-            if (!markdown) return '# ❌ No report generated';
+          const formatReport = (raw) => {
+            if (!raw) return '## 🚨 No Slither Report Generated';
             
-            // Add header and format the markdown
-            return `## 🔍 Slither Security Report - Checklist Format 
-            ${markdown}
+            const findings = raw.split('\n')
+              .filter(line => line.includes('- [ ]'))
+              .map(f => f.replace('- [ ]', '❌'));
+              
+            const passed = raw.split('\n')
+              .filter(line => line.includes('- [X]'))
+              .map(f => f.replace('- [X]', '✓'));
 
-          **Scanned Directory**: merkle-store-hardhat  
-          **Timestamp**: ${new Date().toISOString()}
-            `;
-          };
-          
-          const markdownReport = processReport(process.env.SLITHER_REPORT);
-          const hasFindings = markdownReport.includes('- [ ]');
-          
+            return `
+          ## 🔍 Slither Security Report ${process.env.SLITHER_STATUS}
+
+          ${findings.length ? `
+          ### ⚠️ Findings (${findings.length})
+          ${findings.join('\n')}
+          ` : ''}
+
+          ${passed.length ? `
+          ### ✅ Passed Checks
+          <details>
+          <summary>Show ${passed.length} passed items</summary>
+          ${passed.join('\n')}
+          </details>
+          ` : ''}
+
+          📊 **Scan Summary**  
+          • Contracts: ${(raw.match(/analyzed \((\d+) contracts/) || [])[1] || 'N/A'}  
+          • Detectors: ${(raw.match(/(\d+) detectors/) || [])[1] || 'N/A'}  
+          • Timestamp: ${new Date().toISOString()}
+
+          [Download Full Report](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+                      `;
+                    };
+
           await github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: markdownReport
+            body: formatReport(process.env.SLITHER_REPORT)
           });
-          
-          // Also upload the markdown file as an artifact
-          const artifactClient = require('@actions/artifact');
-          const artifact = new artifactClient.DefaultArtifactClient();
-          await artifact.uploadArtifact(
-            'slither-report',
-            ['merkle-store-hardhat/slither.md'],
-            process.cwd()
-          );
