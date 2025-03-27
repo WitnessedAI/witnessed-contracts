@@ -49,9 +49,11 @@ jobs:
           --markdown-root "../" \
           > ../slither.md 2>&1 || echo "Slither completed with findings"
         
-        # Convert markdown to HTML for better PR display
+        # Extract only the summary section
+        awk '/INFO:Slither:. analyzed/ {show=1} show' ../slither.md > ../slither-summary.md
+        
         echo "SLITHER_REPORT<<EOF" >> $GITHUB_ENV
-        cat ../slither.md >> $GITHUB_ENV
+        cat ../slither-summary.md >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
         
     - name: Create PR comment with results
@@ -60,20 +62,18 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          const fs = require('fs');
-          
           // Process the markdown report
           const processReport = (markdown) => {
             if (!markdown) return '# ❌ No report generated';
             
             // Add header and format the markdown
-            return `## 🔍 Slither Security Report - Checklist Format 
-            ${markdown}
+            return `## 🔍 Slither Security Report - Checklist Format
+          ${markdown}
 
           **Scanned Directory**: merkle-store-hardhat  
           **Timestamp**: ${new Date().toISOString()}
-            `;
-          };
+                      `;
+                    };
           
           const markdownReport = processReport(process.env.SLITHER_REPORT);
           const hasFindings = markdownReport.includes('- [ ]');
