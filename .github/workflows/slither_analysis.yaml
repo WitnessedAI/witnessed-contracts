@@ -84,3 +84,94 @@ jobs:
             repo: context.repo.repo,
             body: markdownReport
           });
+  coverage:
+    name: Run Test Coverage
+    runs-on: ubuntu-latest
+    container:
+      image: node:18
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+        
+    - name: Install yarn
+      run: npm install -g yarn
+        
+    - name: Cache yarn packages
+      uses: actions/cache@v3
+      id: yarn-cache
+      with:
+        path: |
+          merkle-store-hardhat/node_modules
+          merkle-store-hardhat/.yarn/cache
+        key: ${{ runner.os }}-yarn-${{ hashFiles('merkle-store-hardhat/yarn.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-yarn-
+          
+    - name: Install project dependencies
+      run: |
+        cd merkle-store-hardhat
+        yarn install --frozen-lockfile
+        cd ..
+        
+    - name: Run Hardhat coverage
+      id: coverage
+      run: |
+        cd merkle-store-hardhat
+        yarn hardhat coverage > ../coverage.log 2>&1 || echo "Coverage completed"
+        
+        # Extract coverage summary
+        COVERAGE_SUMMARY=$(grep -A 10 "Coverage summary" ../coverage.log)
+        echo "COVERAGE_SUMMARY<<EOF" >> $GITHUB_ENV
+        echo "$COVERAGE_SUMMARY" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+        
+        # Get HTML report path
+        HTML_REPORT=$(find . -path '*coverage/index.html' | head -1)
+        echo "HTML_REPORT_PATH=$HTML_REPORT" >> $GITHUB_ENV
+        
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: |
+          merkle-store-hardhat/coverage/
+          merkle-store-hardhat/coverage.log
+        
+    - name: Create PR comment with coverage
+      uses: actions/github-script@v6
+      if: always()
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const coverageSummary = process.env.COVERAGE_SUMMARY || 'No coverage data generated';
+          const htmlReportPath = process.env.HTML_REPORT_PATH || 'coverage/index.html';
+          const runId = context.runId;
+          
+          const comment = `
+          ## 📊 Test Coverage Report
+          
+          ### Coverage Summary
+          \`\`\`
+          ${coverageSummary}
+          \`\`\`
+          
+          **Detailed Report**: [View HTML Coverage Report](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${runId})
+          
+          **Scanned Directory**: merkle-store-hardhat  
+          **Timestamp**: ${new Date().toISOString()}
+          `;
+          
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
