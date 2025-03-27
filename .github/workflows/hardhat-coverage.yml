@@ -36,19 +36,45 @@ jobs:
           name: coverage-report
           path: merkle-store-hardhat/coverage/
 
-      - name: Format coverage summary
+      - name: Format coverage summary from raw counts
         id: coverage
         run: |
-          echo '```' > summary.txt
-          grep -A 20 '<h1>All files</h1>' merkle-store-hardhat/coverage/lcov-report/index.html | sed 's/<[^>]*>//g' >> summary.txt
-          echo '```' >> summary.txt
-          echo "summary<<EOF" >> $GITHUB_OUTPUT
-          cat summary.txt >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
+            COVERAGE_JSON="merkle-store-hardhat/coverage/coverage-final.json"
+            if [ ! -f "$COVERAGE_JSON" ]; then
+              echo "summary=⚠️ No coverage report generated." >> $GITHUB_OUTPUT
+              exit 0
+            fi
+  
+            echo '🧪 **Solidity Coverage Report**' > summary.txt
+            echo '' >> summary.txt
+            echo '| File | % Statements | % Branches | % Functions | % Lines |' >> summary.txt
+            echo '|------|--------------|-------------|--------------|----------|' >> summary.txt
+  
+            jq -r 'to_entries[] | [.key,
+              (.value.s | to_entries | map(select(.value > 0)) | length) as $s_covered |
+              (.value.s | length) as $s_total |
+              ($s_covered * 100 / $s_total),
+  
+              (.value.b | to_entries | map([.value[0], .value[1]]) | flatten | map(select(. > 0)) | length) as $b_covered |
+              (.value.b | to_entries | map([.value[0], .value[1]]) | flatten | length) as $b_total |
+              if $b_total == 0 then 100 else ($b_covered * 100 / $b_total) end,
+  
+              (.value.f | to_entries | map(select(.value > 0)) | length) as $f_covered |
+              (.value.f | length) as $f_total |
+              ($f_covered * 100 / $f_total),
+  
+              (.value.l | to_entries | map(select(.value > 0)) | length) as $l_covered |
+              (.value.l | length) as $l_total |
+              ($l_covered * 100 / $l_total)
+            ] | @tsv' "$COVERAGE_JSON" |
+            while IFS=$'\t' read -r file stmt branch func line; do
+              printf "| %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% |\n" "$file" "$stmt" "$branch" "$func" "$line" >> summary.txt
+            done
+  
+            echo "summary<<EOF" >> $GITHUB_OUTPUT
+            cat summary.txt >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT  
       - name: Comment on PR with coverage
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          message: |
-            🧪 **Solidity Coverage Report**
-            ${{ steps.coverage.outputs.summary }}
+            message: ${{ steps.coverage.outputs.summary }}
