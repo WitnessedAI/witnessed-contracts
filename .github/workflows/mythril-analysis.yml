@@ -1,0 +1,81 @@
+name: Mythril Security Analysis
+
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  actions: write
+  checks: write
+  pull-requests: write
+
+jobs:
+  mythril-analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Mythril + solc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip
+          pip3 install mythril
+          npm install -g solc
+
+      - name: Install Node.js dependencies
+        working-directory: merkle-store-hardhat
+        run: |
+          yarn install --frozen-lockfile
+
+      - name: Compile contracts using Hardhat
+        working-directory: merkle-store-hardhat
+        run: |
+          npx hardhat compile
+
+      - name: Run Mythril on each contract
+        id: mythril
+        run: |
+          mkdir -p mythril-reports
+          cd merkle-store-hardhat/contracts
+
+          for file in *.sol; do
+            echo "Analyzing $file with Mythril..."
+            myth analyze "$file" --execution-timeout 180 --max-depth 32 \
+              > "../../mythril-reports/$file.txt" 2>&1 || true
+          done
+
+          cd ../../
+
+          echo "MYTHRIL_SUMMARY<<EOF" >> $GITHUB_ENV
+          for file in mythril-reports/*.txt; do
+            echo "### $(basename "$file")" >> summary.txt
+            grep -E "SWC|====" "$file" >> summary.txt || echo "(No issues found)" >> summary.txt
+            echo -e "\n---\n" >> summary.txt
+          done
+          cat summary.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Comment PR with Mythril results
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const report = process.env.MYTHRIL_SUMMARY;
+            const message = report
+              ? `## 🧠 Mythril Security Report
+
+            ${report}
+
+            **Note**: Mythril performs symbolic execution for vulnerability analysis. Review any SWC codes.`
+                        : `⚠️ Mythril report not generated.`;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });
