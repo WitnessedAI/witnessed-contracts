@@ -4,7 +4,7 @@ import { AdditionalDeploymentStorage } from "../utils/additional_deployment_stor
 
 task(
   "deploy:merkle-store",
-  "Deploy the UpgradableMerkleStore with a Transparent Proxy"
+  "Deploy the UpgradableMerkleStore with a UUPS Proxy"
 )
   .addParam("gnosis", "The Gnosis Safe address for upgrade admin")
   .setAction(async (taskArgs, hre) => {
@@ -22,6 +22,7 @@ task(
       [gnosisSafeAddress, operationalAdminAddress], // Initializer arguments
       {
         initializer: "initialize", // Initializer function
+        kind: "uups", // Proxy kind
       }
     );
 
